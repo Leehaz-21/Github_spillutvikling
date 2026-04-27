@@ -7,7 +7,8 @@ screen_width=1000
 screen_height=700
 
 screen=pygame.display.set_mode((screen_width,screen_height))
-pygame.display.set_caption("Leo sitt spill")  
+pygame.display.set_caption("Leo sitt spill")
+clock = pygame.time.Clock()
 
 #define game variables
 tile_size= 50
@@ -15,10 +16,7 @@ tile_size= 50
 #load images
 bg_img=pygame.image.load("Graphics/BG-Dark-Fantasy-1.png")
 
-def draw_grid():
-    for line in range(0, 20):
-        pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screen_width, line * tile_size))
-        pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screen_height))
+
 
 class Player():
     def __init__(self, x, y):
@@ -30,43 +28,57 @@ class Player():
         self.vel_y = 0
         self.jumped = False
 
-    def update(self):
+    def update(self, tile_list):
 
         dx = 0
         dy = 0
 
-        #key presses
+        # key presses
         key = pygame.key.get_pressed()
-        if key[pygame.K_SPACE] and self.jumped == False:
+        if key[pygame.K_SPACE] and not self.jumped:
             self.vel_y = -15
             self.jumped = True
-            if key[pygame.K_SPACE] == False:
-                self.jumped = False
+        if not key[pygame.K_SPACE]:
+            self.jumped = False
         if key[pygame.K_LEFT]:
-            dx -= 5 
+            dx -= 5
         if key[pygame.K_RIGHT]:
             dx += 5
-        
-        #gravity
+
+        # gravity
         self.vel_y += 1
         if self.vel_y > 10:
             self.vel_y = 10
         dy += self.vel_y
 
-        #check for collision
-
-        #update player cordinates
+        # move horizontally and check collisions
         self.rect.x += dx
-        self.rect.y += dy
+        for tile in tile_list:
+            if self.rect.colliderect(tile[1]):
+                if dx > 0:
+                    self.rect.right = tile[1].left
+                elif dx < 0:
+                    self.rect.left = tile[1].right
 
+        # move vertically and check collisions
+        self.rect.y += dy
+        for tile in tile_list:
+            if self.rect.colliderect(tile[1]):
+                if self.vel_y > 0:
+                    self.rect.bottom = tile[1].top
+                    self.vel_y = 0
+                    self.jumped = False
+                elif self.vel_y < 0:
+                    self.rect.top = tile[1].bottom
+                    self.vel_y = 0
+
+        # floor collision
         if self.rect.bottom > screen_height:
             self.rect.bottom = screen_height
-            dy = 0
-        
+            self.vel_y = 0
+            self.jumped = False
 
-
-
-        # tegn spilleren 
+        # tegn spilleren
         screen.blit(self.image, self.rect)
         
 
@@ -103,7 +115,7 @@ world_data=[
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],
@@ -123,15 +135,13 @@ while run:
 
     world.draw()
 
-    Player.update()
-
-    draw_grid()
-
+    Player.update(world.tile_list)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
 
-        pygame.display.update()
+    pygame.display.update()
+    clock.tick(60)
 
 pygame.quit()
